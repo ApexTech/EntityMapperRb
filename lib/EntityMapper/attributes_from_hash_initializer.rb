@@ -8,30 +8,12 @@ module EntityMapper
 
     def_delegators :init_attrs, :[], :fetch
 
-    def NullConversionMethodProxyForInitializer(value)
-      value
-    end
-
     def initialize(attrs)
       @init_attrs = attrs.respond_to?(:with_indifferent_access) ? attrs.with_indifferent_access : attrs
 
-      self.class.initializable_attributes_definitions.each do |(attribute, type)|
-        instance_variable_set("@#{attribute}", build_from_type(type.to_s, init_attrs[attribute]))
+      self.class.initializable_attributes_definitions.each do |(attribute, property_metadata)|
+        instance_variable_set("@#{attribute}", PropertyInitializerFromValue.call(property_metadata, init_attrs[property_metadata.key]))
       end
-    end
-
-    def build_from_type(type, value)
-      conversion_method = if type.include?("::")
-        type_parts = type.split("::")
-        method_name = type_parts.last
-
-        method_source = type_parts[0..-2].join("::")
-        Module.const_get(method_source).method(method_name)
-      else
-        method(type.to_s)
-      end
-
-      conversion_method.call(value)
     end
 
     module ClassMethods
@@ -44,13 +26,14 @@ module EntityMapper
       end
 
       def initializable_attributes(*args)
-        args.each { |arg| initializable_attribute(arg) }
+        args.flatten.each { |arg| initializable_attribute(arg) }
       end
 
-      def initializable_attribute(arg, type = :NullConversionMethodProxyForInitializer)
-        initializable_attributes_definitions[arg] = type
+      def initializable_attribute(arg, type = nil, options = {})
+        property = EntityProperty.new(arg, type, options)
+        initializable_attributes_definitions[property.name] = property
 
-        attr_reader arg
+        attr_reader property.name
       end
     end
 
