@@ -7,6 +7,6 @@ group :development, :test do
   gem "simplecov"
   gem "awesome_print"
   gem "pry-byebug"
-  gem "rake", "~> 12.0"
+  gem "rake", "~> 13.0"
   gem "rspec", "~> 3.0"
 end
